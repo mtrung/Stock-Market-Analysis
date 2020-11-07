@@ -1,6 +1,7 @@
 from Moving_Average import movingAverages
+from datetime import timedelta
 
-def back_test(data, indicators):
+def back_test(data, indicators, p):
     num_buy = len(indicators.loc[indicators.positions == 1.0])
     num_sell = len(indicators.loc[indicators.positions == -1.0])
     total_buy = sum(indicators.loc[indicators.positions == 1.0]['price'])
@@ -27,15 +28,31 @@ def back_test(data, indicators):
 
 
 # -------------------- data importing and back testing -------------------------
-stock = "T"
-print('\n---------- Simple Moving Average Crossover -----------')
-p = movingAverages(stock, "simple")
-indicators = p.get_positions()
-data = p.get_data()
-print(str(back_test(data, indicators)) + "%")
-print('\n---------- Exponential Moving Average Crossover -----------')
-p = movingAverages(stock, "exponential")
-indicators = p.get_positions()
-data = p.get_data()
-print(str(back_test(data, indicators)) + "%")
-p.plot()
+def sma(stock):
+    print('\n---------- Simple Moving Average Crossover -----------')
+    p = movingAverages(stock, "simple")
+    p.pullData(timeDelta)
+    indicators = p.get_positions(5, 15)
+    data = p.get_data()
+    print(str(back_test(data, indicators, p)) + "%")
+    p.plot()
+
+def ema(stock):
+    print('\n---------- Exponential Moving Average Crossover -----------')
+    p = movingAverages(stock, "exponential")
+    p.pullData(timeDelta)
+    indicators = p.get_positions(5, 15)
+    data = p.get_data()
+    print(str(back_test(data, indicators, p)) + "%")
+    p.plot()
+
+timeDelta = timedelta(days=365 * 2)
+
+def main(stock='TSLA'):
+    ema(stock)
+
+
+
+if __name__ == "__main__":
+    import plac
+    plac.call(main)
