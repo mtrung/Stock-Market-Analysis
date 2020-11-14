@@ -1,19 +1,7 @@
-import pandas_datareader as pdr
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
 
-
-def pullData(stock, timeDelta: timedelta):
-    # -------------------- Getting the data --------------------
-    # self.start_time = (date.today() - timedelta(month_window * 365 / 12)).isoformat()
-    end_time = datetime.today()
-    start_time = end_time - timeDelta #datetime(2014, 1, 1)
-    
-    # self.end_time = datetime(2020, 1, 28)
-    # data = pdr.get_data_yahoo(stock, start=start_time, end=end_time)
-    return pdr.DataReader(stock, 'yahoo', start_time, end_time), start_time, end_time
 
 class movingAverages:
     def __init__(self, stock: str, average_type: str):
@@ -25,15 +13,17 @@ class movingAverages:
         # Simple or Exponential Moving Average
         self.average_type = average_type
 
-    def pullData(self, timeDelta: timedelta):
-        self.data, self.start_time, self.end_time = pullData(self.stock, timeDelta)
+    def __call__(self, df):
+        return self.get_positions(df)
 
-    def get_positions(self, short: int = 5, long: int = 20):
+    def get_positions(self, data, short: int = 5, long: int = 20):
+        self.data = data
+
         # Short moving average
-        self.short_window = short  #50
+        self.short_window = short  # 50
         self.shortMAName = f'{self.shortMAName}_{self.short_window}'
         # Long moving average
-        self.long_window = long  #200        
+        self.long_window = long  # 200
         self.longMAName = f'{self.longMAName}_{self.long_window}'
 
         # -------------- Moving Average Algorithm ---------------
@@ -44,28 +34,32 @@ class movingAverages:
         # Short and long window average over the data period
         if self.average_type == "simple":
             indicators[self.shortMAName] = self.data['Close'].rolling(window=self.short_window, min_periods=1,
-                                                                 center=False).mean()
+                                                                      center=False).mean()
             indicators[self.longMAName] = self.data['Close'].rolling(window=self.long_window, min_periods=1,
-                                                                center=False).mean()
+                                                                     center=False).mean()
         elif self.average_type == "exponential":
-            indicators[self.shortMAName] = self.data['Close'].ewm(span=self.short_window, adjust=False).mean()
-            indicators[self.longMAName] = self.data['Close'].ewm(span=self.long_window, adjust=False).mean()
+            indicators[self.shortMAName] = self.data['Close'].ewm(
+                span=self.short_window, adjust=False).mean()
+            indicators[self.longMAName] = self.data['Close'].ewm(
+                span=self.long_window, adjust=False).mean()
 
         # Where they cross
         indicators['signal'][self.short_window:] = np.where(
-            indicators[self.shortMAName][self.short_window:] > indicators[self.longMAName][self.short_window:],
+            indicators[self.shortMAName][self.short_window:
+                                         ] > indicators[self.longMAName][self.short_window:],
             1.0, 0.0)
 
         # Buy vs Sell
         indicators['positions'] = indicators['signal'].diff()
+
         self.indicators = indicators
-        return indicators.loc[indicators['positions'] ** 2 == 1]
+        # return indicators.loc[indicators['positions'] ** 2 == 1]
+        return indicators
 
-    def get_time(self):
-        return self.start_time, self.end_time
-
-    def get_data(self):
-        return self.data
+    def dollarCostAvg(self, indicators):
+        # day 15 of the month
+        indicators['positions'][indicators.index.day == 15] = 1.0
+        return indicators
 
     def plot(self):
         # -------------------- Plotting -------------------------
